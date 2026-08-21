@@ -13,6 +13,10 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
     crossorigin="anonymous"></script>
+  <!-- Tích hợp Chart.js để vẽ biểu đồ thống kê tâm trạng -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Thư viện html2pdf.js để xuất file PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body class="app">
@@ -34,25 +38,140 @@
 
   <main class="container pb-5">
     <div class="row g-4">
+      <!-- Cột trái: Camera và Biểu đồ thống kê -->
       <div class="col-12 col-lg-6">
-        <section class="card card-glass h-100">
-          <div class="card-header card-header-soft">
+        <section class="card card-glass mb-4">
+          <div class="card-header card-header-soft d-flex justify-content-between align-items-center">
             <h2 class="card-title h5 mb-0">Emotion Detector</h2>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Mode selector">
+              <button id="btnModeWebcam" type="button" class="btn btn-primary active">Webcam</button>
+              <button id="btnModeUpload" type="button" class="btn btn-outline-primary">Tải ảnh lên</button>
+            </div>
           </div>
           <div class="card-body">
-            <div class="video-shell">
-              <img id="video" class="video-feed" src="{{ url_for('video_feed') }}" alt="Webcam feed" />
+            <!-- Giao diện Webcam -->
+            <div id="viewWebcam">
+              <div class="video-shell">
+                <img id="video" class="video-feed" src="{{ url_for('video_feed') }}" alt="Webcam feed" />
+              </div>
+              
+              <!-- Nút bấm Chụp ảnh / Khóa camera -->
+              <div class="d-flex gap-2 justify-content-center mt-3">
+                <button id="btnCapture" class="btn btn-warning w-50 fw-bold text-dark d-inline-flex align-items-center justify-content-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-camera-fill" viewBox="0 0 16 16">
+                    <path d="M10.5 8.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+                    <path d="M2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4H2zm.5 5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                  </svg>
+                  Chụp ảnh & Đề xuất
+                </button>
+                <button id="btnResume" class="btn btn-secondary w-50 fw-bold d-none">
+                  Tiếp tục quét
+                </button>
+              </div>
             </div>
+
+            <!-- Giao diện Tải ảnh lên -->
+            <div id="viewUpload" class="d-none">
+              <div class="video-shell d-flex flex-column align-items-center justify-content-center" style="background: rgba(15, 23, 42, 0.05); cursor: pointer;" id="dropZone">
+                <img id="processedImg" class="video-feed d-none" src="" alt="Processed upload" />
+                <div id="uploadPlaceholder" class="text-center p-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-cloud-arrow-up-fill text-primary mb-3" viewBox="0 0 16 16">
+                    <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z"/>
+                  </svg>
+                  <p class="mb-1 fw-bold text-dark">Kéo thả ảnh vào đây hoặc click để chọn</p>
+                  <p class="text-muted small">Hỗ trợ các định dạng hình ảnh</p>
+                </div>
+                <input type="file" id="fileInput" class="d-none" accept="image/*" />
+              </div>
+              <div class="d-flex gap-2 justify-content-center mt-3">
+                <button id="btnSelectFile" class="btn btn-primary w-50 fw-bold">Chọn ảnh phân tích</button>
+                <button id="btnBackToWebcam" class="btn btn-secondary w-50 fw-bold">Quay lại Webcam</button>
+              </div>
+            </div>
+            
             <div class="hint mt-3">Mẹo: để mặt thẳng và đủ sáng để nhận diện tốt hơn.</div>
+
+            <!-- Form Đăng ký khuôn mặt -->
+            <div class="mt-4 border-top pt-3">
+              <h3 class="h6 text-dark font-weight-bold mb-2">Đăng ký danh tính khuôn mặt</h3>
+              <div class="input-group input-group-sm mb-1">
+                <input type="text" id="txtRegisterName" class="form-control" placeholder="Nhập tên của bạn (Ví dụ: Mei Mei)..." aria-label="Tên đăng ký">
+                <button class="btn btn-primary" type="button" id="btnRegisterFace">Đăng ký</button>
+              </div>
+              <div id="registerStatus" class="small text-success font-weight-bold" style="display: none;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Thống kê tâm trạng & Nhật ký cảm xúc -->
+        <section class="card card-glass">
+          <div class="card-header card-header-soft d-flex justify-content-between align-items-center">
+            <h2 class="card-title h6 mb-0">Thống kê tâm trạng hôm nay</h2>
+            <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;" id="btnClearHistory">Xóa thống kê</button>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-center g-3">
+              <!-- Biểu đồ ở bên trái -->
+              <div class="col-12 col-md-6 d-flex justify-content-center">
+                <div style="width: 100%; max-width: 250px; height: 180px; position: relative;">
+                  <canvas id="emotionChart"></canvas>
+                </div>
+              </div>
+              <!-- Nhật ký quét và nút xuất PDF bên phải -->
+              <div class="col-12 col-md-6">
+                <h3 class="h6 text-dark font-weight-bold mb-2">Nhật ký cảm xúc</h3>
+                <div id="diaryList" class="diary-list">
+                  <!-- Các dòng nhật ký hiển thị động -->
+                </div>
+                <button id="btnExportPDF" class="btn btn-sm btn-primary w-100 mt-3 d-flex align-items-center justify-content-center gap-2 py-2 font-weight-bold">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-file-earmark-pdf-fill" viewBox="0 0 16 16">
+                    <path d="M5.602 10.153C5.602 11.233 4.982 12 4.1 12H3.5v-3.75h.6c.882 0 1.502.766 1.502 1.903zm-1.026.3c0-.608-.34-.949-.806-.949h-.27v1.822h.27c.466 0 .806-.317.806-.873zm5.006 1.347c0-.2-.14-.383-.347-.383-.245 0-.383.178-.383.39v.629c0 .245.138.383.346.383.246 0 .384-.138.384-.383zm.67-1.12c0-.528-.42-.907-1.066-.907H8.3v3.75h.687v-1.282h.334c.547 0 .888-.347.888-.87v-.69zm-.687.712v-.65h.336c.294 0 .438.163.438.385v.041c0 .227-.144.385-.438.385z"/>
+                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 5A1.5 1.5 0 0 1 11 3.5H14M6.002 9.176c-.057-.26-.145-.558-.25-.89h-.008L4.1 9.87h1.002v-.694zm1.189 2.052h-.534a.2.2 0 0 1-.19-.15L6.1 10.05H4.15l-.36 1.028a.2.2 0 0 1-.19.15h-.526a.2.2 0 0 1-.19-.272L5.132 8.35a.2.2 0 0 1 .19-.15h.68a.2.2 0 0 1 .19.15l2.001 2.724a.2.2 0 0 1-.19.272zm4.12 1.31h.756a.2.2 0 0 1 .19.272l-1.001 2.724a.2.2 0 0 1-.19.15h-.68a.2.2 0 0 1-.19-.15l-2.001-2.724a.2.2 0 0 1 .19-.272h.534c.094 0 .17.062.19.15l.362 1.028H10.95l.36-1.028a.2.2 0 0 1 .19-.15z"/>
+                  </svg>Tải báo cáo PDF
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       </div>
 
+      <!-- Cột phải: Đề xuất bài hát -->
       <div class="col-12 col-lg-6">
         <section class="card card-glass h-100">
           <div class="card-header card-header-soft d-flex align-items-center justify-content-between gap-3">
             <h2 class="card-title h5 mb-0">Song Recommendations</h2>
-            <div class="small text-muted" id="tableStatus">Đang tải…</div>
+            
+            <!-- Hộp chọn Thể loại nhạc & Trạng thái phát âm -->
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <!-- Giả lập/Hiệu chỉnh cảm xúc thủ công -->
+              <select id="manualEmotionSelect" class="form-select form-select-sm w-auto" title="Điều chỉnh cảm xúc thủ công">
+                <option value="">AI Quét tự động</option>
+                <option value="Happy">Khớp: Vui vẻ (Happy)</option>
+                <option value="Sad">Khớp: Buồn bã (Sad)</option>
+                <option value="Angry">Khớp: Tức giận (Angry)</option>
+                <option value="Neutral">Khớp: Bình thường (Neutral)</option>
+                <option value="Surprised">Khớp: Ngạc nhiên (Surprised)</option>
+                <option value="Fearful">Khớp: Sợ hãi (Fearful)</option>
+              </select>
+
+              <select id="genreSelect" class="form-select form-select-sm w-auto">
+                <option value="usuk">US-UK (Mặc định)</option>
+                <option value="vpop">V-Pop (Nhạc Việt)</option>
+                <option value="lofi">Lofi (Không lời)</option>
+              </select>
+              
+              <!-- Nút Tắt/Bật giọng nói AI -->
+              <button id="btnVoiceToggle" class="btn btn-sm btn-outline-secondary py-1 px-2 d-inline-flex align-items-center justify-content-center" title="Tắt/Bật giọng nói AI">
+                <svg id="svgVoiceOn" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-volume-up-fill" viewBox="0 0 16 16">
+                  <path d="M11.536 14.01A8.47 8.47 0 0 0 14 10a8.47 8.47 0 0 0-2.464-4.01C10.54 4.982 9.31 4.5 8 4.5v9c1.31 0 2.54-.482 3.536-1.51M8 1.5A6.5 6.5 0 0 1 12.5 4v8A6.5 6.5 0 0 1 8 14.5zM3.5 6h1.793l2.854-2.853A.5.5 0 0 1 9 3.5v9a.5.5 0 0 1-.854.354L5.293 10H3.5A1.5 1.5 0 0 1 2 8.5v-1A1.5 1.5 0 0 1 3.5 6"/>
+                </svg>
+                <svg id="svgVoiceMuted" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-volume-mute-fill d-none" viewBox="0 0 16 16">
+                  <path d="M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06zm7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0z"/>
+                </svg>
+              </button>
+              
+              <div class="small text-muted" id="tableStatus" style="min-width: 120px;">Đang tải…</div>
+            </div>
           </div>
           <div class="card-body">
             <div id="ResultArea" class="table-wrap"></div>
@@ -62,10 +181,201 @@
     </div>
   </main>
 
+  <!-- Mẫu báo cáo PDF ẩn (A4 Format) -->
+  <div id="pdfReportTemplate" style="display: none; padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; background: #fff;">
+    <div style="text-align: center; border-bottom: 2px solid #0d6efd; padding-bottom: 15px; margin-bottom: 20px;">
+      <h1 style="margin: 0; color: #0d6efd; font-size: 26px; text-transform: uppercase; letter-spacing: 1px;">Báo cáo phân tích cảm xúc & Âm nhạc gợi ý</h1>
+      <p style="margin: 5px 0 0 0; color: #666; font-size: 13px;">Hệ thống đề xuất âm nhạc thông minh AI (Graduation Thesis Report)</p>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; border-bottom: 1px dashed #eee; padding-bottom: 10px;">
+      <div><strong>Ngày xuất:</strong> <span id="pdfDate"></span></div>
+      <div><strong>Cảm xúc quét cuối:</strong> <span id="pdfCurrentEmotion" style="color: #0d6efd; font-weight: bold;"></span></div>
+    </div>
+    
+    <div style="display: flex; gap: 20px; margin-bottom: 30px; align-items: stretch;">
+      <div style="flex: 1; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fafafa;">
+        <h3 style="margin-top: 0; font-size: 13px; color: #555; margin-bottom: 10px; font-weight: 600;">Tỉ lệ phân bố cảm xúc ghi nhận</h3>
+        <div style="height: 120px; width: 100%; display: flex; justify-content: center; align-items: center;">
+          <img id="pdfChartImage" style="max-height: 110px; max-width: 100%; object-fit: contain;" />
+        </div>
+      </div>
+      
+      <div style="flex: 1; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; background: #fafafa;">
+        <h3 style="margin-top: 0; font-size: 13px; color: #555; margin-bottom: 10px; font-weight: 600;">Nhật ký quét gần nhất</h3>
+        <ol id="pdfDiaryList" style="padding-left: 20px; margin: 0; font-size: 11px; line-height: 1.8; color: #444;">
+        </ol>
+      </div>
+    </div>
+
+    <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+      <h3 style="margin-top: 0; font-size: 14px; color: #0d6efd; border-bottom: 1px solid #eee; padding-bottom: 6px; font-weight: 600; margin-bottom: 10px;">Danh sách bài hát gợi ý hiện tại</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+        <thead>
+          <tr style="background: #f1f3f5; border-bottom: 1px solid #ddd; text-align: left;">
+            <th style="padding: 6px 10px; font-weight: 600; color: #495057;">Tên bài hát</th>
+            <th style="padding: 6px 10px; font-weight: 600; color: #495057;">Album</th>
+            <th style="padding: 6px 10px; font-weight: 600; color: #495057;">Nghệ sĩ</th>
+          </tr>
+        </thead>
+        <tbody id="pdfSongsTableBody">
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 35px; text-align: center; border-top: 1px solid #eee; padding-top: 12px; color: #999; font-size: 10px; font-style: italic;">
+      Báo cáo được tạo tự động bởi ứng dụng Emotion Music Recommender (KLTN).
+    </div>
+  </div>
+
   <script>
     const statusEl = document.getElementById('tableStatus');
     const resultEl = document.getElementById('ResultArea');
+    let currentMode = 'webcam'; // 'webcam' hoặc 'upload'
+    const btnCapture = document.getElementById('btnCapture');
+    const btnResume = document.getElementById('btnResume');
+    const genreSelect = document.getElementById('genreSelect');
+    const btnClearHistory = document.getElementById('btnClearHistory');
+    
+    // Khai báo quản lý Tắt/Bật giọng nói AI
+    const btnVoiceToggle = document.getElementById('btnVoiceToggle');
+    const svgVoiceOn = document.getElementById('svgVoiceOn');
+    const svgVoiceMuted = document.getElementById('svgVoiceMuted');
+    let isMuted = JSON.parse(localStorage.getItem('isVoiceMuted')) || false;
 
+    // Cập nhật trạng thái loa lúc ban đầu
+    function updateVoiceButtonUI() {
+      if (isMuted) {
+        svgVoiceOn.classList.add('d-none');
+        svgVoiceMuted.classList.remove('d-none');
+        btnVoiceToggle.classList.remove('btn-outline-secondary');
+        btnVoiceToggle.classList.add('btn-outline-danger');
+      } else {
+        svgVoiceOn.classList.remove('d-none');
+        svgVoiceMuted.classList.add('d-none');
+        btnVoiceToggle.classList.remove('btn-outline-danger');
+        btnVoiceToggle.classList.add('btn-outline-secondary');
+      }
+    }
+    updateVoiceButtonUI();
+
+    btnVoiceToggle.addEventListener('click', () => {
+      isMuted = !isMuted;
+      localStorage.setItem('isVoiceMuted', JSON.stringify(isMuted));
+      updateVoiceButtonUI();
+      if (isMuted) {
+        window.speechSynthesis.cancel(); // Tắt giọng nói ngay lập tức khi người dùng click tắt âm
+      }
+    });
+
+    // Quản lý lịch sử cảm xúc
+    const emotionsList = ["Angry", "Disgusted", "Fearful", "Happy", "Neutral", "Sad", "Surprised"];
+    let emotionHistory = JSON.parse(localStorage.getItem('emotionHistory')) || {
+      "Angry": 0, "Disgusted": 0, "Fearful": 0, "Happy": 0, "Neutral": 0, "Sad": 0, "Surprised": 0
+    };
+
+    // Quản lý Nhật ký quét gần đây (Diary)
+    let emotionDiary = JSON.parse(localStorage.getItem('emotionDiary')) || [];
+
+    const emotionMapVi = {
+      "Angry": "Tức giận",
+      "Disgusted": "Chán ghét",
+      "Fearful": "Sợ hãi",
+      "Happy": "Vui vẻ",
+      "Neutral": "Bình thường",
+      "Sad": "Buồn bã",
+      "Surprised": "Ngạc nhiên"
+    };
+
+    function updateDiaryListUI() {
+      const diaryListEl = document.getElementById('diaryList');
+      if (emotionDiary.length === 0) {
+        diaryListEl.innerHTML = '<div class="text-muted text-center py-3" style="font-size: 0.85rem;">Chưa ghi nhận lịch sử.</div>';
+        return;
+      }
+      let html = '';
+      // Hiển thị 5 dòng quét gần đây nhất
+      const recentScans = emotionDiary.slice(-5).reverse();
+      for (const item of recentScans) {
+        const viName = emotionMapVi[item.emotion] || item.emotion;
+        html += `<div class="diary-item d-flex justify-content-between align-items-center py-1 border-bottom-soft">
+                  <span class="diary-time text-muted small">${item.time}</span>
+                  <span class="diary-emo badge bg-secondary">${viName}</span>
+                </div>`;
+      }
+      diaryListEl.innerHTML = html;
+    }
+    updateDiaryListUI();
+
+    function addDiaryRecord(emotion) {
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      emotionDiary.push({ time: timeStr, emotion: emotion });
+      if (emotionDiary.length > 50) {
+        emotionDiary.shift(); // Giới hạn kích thước nhật ký tối đa 50 bản ghi
+      }
+      localStorage.setItem('emotionDiary', JSON.stringify(emotionDiary));
+      updateDiaryListUI();
+    }
+
+    let emotionChart = null;
+    function initChart() {
+      const ctx = document.getElementById('emotionChart').getContext('2d');
+      emotionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: emotionsList,
+          datasets: [{
+            data: emotionsList.map(e => emotionHistory[e]),
+            backgroundColor: [
+              '#dc3545', // Angry - Đỏ
+              '#6f42c1', // Disgusted - Tím
+              '#fd7e14', // Fearful - Cam
+              '#ffc107', // Happy - Vàng
+              '#6c757d', // Neutral - Xám
+              '#0d6efd', // Sad - Xanh dương
+              '#198754'  // Surprised - Xanh lá
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false // Ẩn truyền thống huyền để tiết kiệm diện tích, hiển thị ở nhật ký/báo cáo sau
+            }
+          }
+        }
+      });
+    }
+
+    function updateChart(newEmotion) {
+      if (emotionsList.includes(newEmotion)) {
+        emotionHistory[newEmotion] = (emotionHistory[newEmotion] || 0) + 1;
+        localStorage.setItem('emotionHistory', JSON.stringify(emotionHistory));
+        if (emotionChart) {
+          emotionChart.data.datasets[0].data = emotionsList.map(e => emotionHistory[e]);
+          emotionChart.update();
+        }
+      }
+    }
+
+    btnClearHistory.addEventListener('click', () => {
+      if (confirm('Bạn muốn xóa tất cả thống kê và nhật ký cảm xúc?')) {
+        emotionHistory = { "Angry": 0, "Disgusted": 0, "Fearful": 0, "Happy": 0, "Neutral": 0, "Sad": 0, "Surprised": 0 };
+        emotionDiary = [];
+        localStorage.setItem('emotionHistory', JSON.stringify(emotionHistory));
+        localStorage.setItem('emotionDiary', JSON.stringify(emotionDiary));
+        if (emotionChart) {
+          emotionChart.data.datasets[0].data = emotionsList.map(e => 0);
+          emotionChart.update();
+        }
+        updateDiaryListUI();
+      }
+    });
+
+    // Hàm escape HTML an toàn
     function escapeHtml(value) {
       const str = String(value ?? '');
       return str
@@ -76,18 +386,41 @@
         .replaceAll("'", '&#039;');
     }
 
+    // Render bảng bài hát kèm theo nút bấm liên kết đến Youtube và Spotify
+    let currentSongsList = [];
     function renderTable(rows) {
-      const headers = ['Name', 'Album', 'Artist'];
+      currentSongsList = rows;
+      const headers = ['Name', 'Album', 'Artist', 'Nghe nhạc'];
       let html = '<div class="table-responsive">';
       html += '<table class="table table-hover align-middle mb-0 table-modern">';
       html += '<thead><tr>' + headers.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>';
       html += '<tbody>';
 
       for (const row of rows) {
+        const query = encodeURIComponent(row.Name + ' ' + row.Artist);
+        const ytLink = `https://www.youtube.com/results?search_query=${query}`;
+        const spLink = `https://open.spotify.com/search/${query}`;
+
         html += '<tr>'
           + `<td class="cell-name">${escapeHtml(row.Name)}</td>`
           + `<td>${escapeHtml(row.Album)}</td>`
           + `<td>${escapeHtml(row.Artist)}</td>`
+          + `<td>
+               <div class="d-flex gap-1">
+                 <a href="${ytLink}" target="_blank" class="btn btn-sm btn-danger py-1 px-2 d-inline-flex align-items-center" title="Tìm trên YouTube">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-play-fill me-1" viewBox="0 0 16 16">
+                     <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
+                   </svg>YouTube
+                 </a>
+                 <a href="${spLink}" target="_blank" class="btn btn-sm btn-success py-1 px-2 d-inline-flex align-items-center" title="Tìm trên Spotify">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-music-note me-1" viewBox="0 0 16 16">
+                     <path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2z"/>
+                     <path fill-rule="evenodd" d="M9 3v10H8V3h1z"/>
+                     <path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5V2.82z"/>
+                   </svg>Spotify
+                 </a>
+               </div>
+             </td>`
           + '</tr>';
       }
 
@@ -96,28 +429,469 @@
     }
 
     let lastPayload = '';
+    let lastEmotion = '';
+    let lastRecognizedUser = '';
+    let simulatedEmotion = ''; // 'Angry', 'Happy', 'Sad', 'Neutral', etc. hoặc '' để chạy webcam
 
+    // Hàm gọi cập nhật dữ liệu định kỳ từ server
     async function tick() {
+      if (currentMode === 'upload') return; // Không quét camera khi ở chế độ tải ảnh
       try {
-        const res = await fetch('/t', { cache: 'no-store' });
+        const genre = genreSelect.value;
+        const res = await fetch(`/t?genre=${genre}&simulate=${simulatedEmotion}`, { cache: 'no-store' });
         const data = await res.json();
-        const payload = JSON.stringify(data);
-
-        if (payload !== lastPayload) {
-          renderTable(data);
-          lastPayload = payload;
+        
+        // Cập nhật bảng nếu danh sách bài hát thay đổi
+        const songsPayload = JSON.stringify(data.songs);
+        if (songsPayload !== lastPayload) {
+          renderTable(data.songs);
+          lastPayload = songsPayload;
         }
 
-        statusEl.textContent = 'Cập nhật: ' + new Date().toLocaleTimeString();
+        // Cập nhật trạng thái đóng băng nút trên giao diện
+        if (data.frozen) {
+          btnCapture.classList.add('d-none');
+          btnResume.classList.remove('d-none');
+        } else {
+          btnCapture.classList.remove('d-none');
+          btnResume.classList.add('d-none');
+        }
+
+        // Cập nhật thống kê biểu đồ nếu cảm xúc thay đổi (chỉ đếm khi không bị khóa camera)
+        if (data.emotion && data.emotion !== lastEmotion && !data.frozen) {
+          updateChart(data.emotion);
+          // Ghi nhận lịch sử vào Nhật ký cảm xúc
+          addDiaryRecord(data.emotion);
+          
+          // Phát giọng nói nhận xét cảm xúc mới (nếu chưa nhận diện ra tên để tránh nói chồng chéo)
+          if (!data.username && speechTexts[data.emotion]) {
+            speak(speechTexts[data.emotion]);
+          }
+          lastEmotion = data.emotion;
+        }
+
+        // Chào mừng bằng giọng nói riêng nếu nhận dạng được khuôn mặt đã đăng ký
+        if (data.username && data.username !== lastRecognizedUser && !data.frozen) {
+          speak(`Xin chào ${data.username}! Rất vui mừng chào đón bạn quay trở lại. Hãy cùng nghe những giai điệu dành riêng cho bạn nhé.`);
+          lastRecognizedUser = data.username;
+        } else if (!data.username) {
+          lastRecognizedUser = ''; // reset nếu không nhận diện ai
+        }
+
+        // Thay đổi class theme của body động theo cảm xúc
+        if (data.emotion) {
+          document.body.className = `app theme-${data.emotion.toLowerCase()}`;
+        }
+
+        const emotionNameVi = {
+          "Angry": "Tức giận",
+          "Disgusted": "Chán ghét",
+          "Fearful": "Sợ hãi",
+          "Happy": "Vui vẻ",
+          "Neutral": "Bình thường",
+          "Sad": "Buồn bã",
+          "Surprised": "Ngạc nhiên"
+        }[data.emotion] || data.emotion;
+
+        // Cập nhật nhãn trạng thái có hiển thị tên người dùng và cử chỉ
+        let labelText = '';
+        if (data.username) {
+          labelText = `Thành viên: ${data.username} | Cảm xúc: ${emotionNameVi}`;
+        } else if (data.is_group) {
+          labelText = `Cảm xúc tập thể: ${emotionNameVi} (Nhóm - ${data.num_faces} người)`;
+        } else {
+          labelText = `Cảm xúc: ${emotionNameVi}`;
+        }
+        
+        statusEl.textContent = labelText;
+
+        // Xử lý điều khiển cử chỉ gạt đầu trái/phải từ server
+        if (data.gesture === 'swipe_right') {
+          const select = document.getElementById('genreSelect');
+          const options = Array.from(select.options);
+          let nextIndex = (select.selectedIndex + 1) % options.length;
+          select.selectedIndex = nextIndex;
+          statusEl.textContent = `Cử chỉ: Đổi thể loại -> ${options[nextIndex].text}`;
+          tick(); // Cập nhật lại ngay lập tức danh sách nhạc
+        } else if (data.gesture === 'swipe_left') {
+          statusEl.textContent = `Cử chỉ: Khóa/Mở camera!`;
+          toggleFreeze();
+        }
       } catch (e) {
         statusEl.textContent = 'Không thể tải dữ liệu.';
       }
     }
 
+    // Phát giọng nói tiếng Việt nhận xét cảm xúc
+    const speechTexts = {
+      "Angry": "Bình tĩnh lại nào! Hãy hít thở sâu và thư giãn đầu óc cùng những bản nhạc êm dịu này nhé.",
+      "Disgusted": "Hãy gạt đi những điều không vui vẻ xung quanh. Hãy thư giãn và tập trung vào những bản nhạc tuyệt vời này.",
+      "Fearful": "Mọi chuyện rồi sẽ ổn thôi, đừng lo lắng quá nhé. Hãy nghe nhạc để lấy lại sự bình tĩnh nào.",
+      "Happy": "Hôm nay trông bạn thật rạng rỡ và tràn đầy năng lượng! Hãy cùng nghe những giai điệu vui tươi này để nhân đôi niềm vui nhé.",
+      "Neutral": "Tâm trạng của bạn đang rất cân bằng và ổn định. Chúc bạn có một ngày học tập và làm việc thật hiệu quả.",
+      "Sad": "Tôi cảm thấy bạn đang có chút tâm sự. Không sao cả, hãy lắng nghe những giai điệu nhẹ nhàng này để xoa dịu tâm hồn nhé.",
+      "Surprised": "Ồ! Trông bạn có vẻ rất bất ngờ! Hãy cùng khám phá những giai điệu thú vị được chuẩn bị riêng cho bạn nhé."
+    };
+
+    let lastSpeakTime = 0;
+    function speak(text) {
+      if (isMuted) return; // Nếu bị tắt âm, kết thúc ngay lập tức
+      if (!('speechSynthesis' in window)) return;
+      const now = Date.now();
+      if (now - lastSpeakTime < 8000) return;
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'vi-VN';
+      
+      const voices = window.speechSynthesis.getVoices();
+      let viVoice = voices.find(v => v.lang.includes('vi') && v.name.includes('Google'));
+      if (!viVoice) {
+        viVoice = voices.find(v => v.lang.includes('vi') && v.name.includes('Linh'));
+      }
+      if (!viVoice) {
+        viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VI'));
+      }
+
+      if (viVoice) {
+        utterance.voice = viVoice;
+      }
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      
+      window.speechSynthesis.speak(utterance);
+      lastSpeakTime = now;
+    }
+
+    if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+
+    // Gửi tín hiệu khóa/quét tiếp camera lên server
+    async function toggleFreeze() {
+      try {
+        const res = await fetch('/toggle_freeze', { method: 'POST' });
+        const data = await res.json();
+        if (data.frozen) {
+          btnCapture.classList.add('d-none');
+          btnResume.classList.remove('d-none');
+          
+          // Đọc to cảm xúc ngay lập tức khi nhấn chụp ảnh khóa khung hình
+          if (lastEmotion && speechTexts[lastEmotion]) {
+            lastSpeakTime = 0; 
+            speak(speechTexts[lastEmotion]);
+          }
+        } else {
+          btnCapture.classList.remove('d-none');
+          btnResume.classList.add('d-none');
+        }
+      } catch (e) {
+        console.error("Không thể thay đổi trạng thái camera.");
+      }
+    }
+
+    btnCapture.addEventListener('click', toggleFreeze);
+    btnResume.addEventListener('click', toggleFreeze);
+
+    // Xuất báo cáo PDF
+    const btnExportPDF = document.getElementById('btnExportPDF');
+    btnExportPDF.addEventListener('click', () => {
+      // 1. Cập nhật ngày tháng trên form PDF
+      document.getElementById('pdfDate').textContent = new Date().toLocaleString('vi-VN');
+      
+      // 2. Cập nhật cảm xúc hiện tại
+      const currEmoVi = emotionMapVi[lastEmotion] || lastEmotion || 'Chưa nhận diện';
+      document.getElementById('pdfCurrentEmotion').textContent = currEmoVi;
+
+      // 3. Đưa hình ảnh biểu đồ vào PDF
+      const pdfChartImage = document.getElementById('pdfChartImage');
+      if (emotionChart) {
+        pdfChartImage.src = emotionChart.toBase64Image();
+      }
+
+      // 4. Đưa nhật ký quét vào PDF (tối đa 6 dòng gần đây)
+      const pdfDiaryList = document.getElementById('pdfDiaryList');
+      if (emotionDiary.length === 0) {
+        pdfDiaryList.innerHTML = '<li>Chưa có nhật ký hoạt động.</li>';
+      } else {
+        let diaryHtml = '';
+        const recentDiary = emotionDiary.slice(-6).reverse();
+        for (const item of recentDiary) {
+          diaryHtml += `<li>[${item.time}] Phát hiện cảm xúc: <strong>${emotionMapVi[item.emotion] || item.emotion}</strong></li>`;
+        }
+        pdfDiaryList.innerHTML = diaryHtml;
+      }
+
+      // 5. Đưa danh sách bài hát hiện tại vào bảng PDF
+      const pdfSongsTableBody = document.getElementById('pdfSongsTableBody');
+      if (currentSongsList.length === 0) {
+        pdfSongsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 10px; color: #999;">Không có bài hát gợi ý nào.</td></tr>';
+      } else {
+        let songsHtml = '';
+        for (const song of currentSongsList) {
+          songsHtml += `<tr style="border-bottom: 1px solid #eee;">
+                          <td style="padding: 6px 10px; font-weight: 500;">${escapeHtml(song.Name)}</td>
+                          <td style="padding: 6px 10px; color: #555;">${escapeHtml(song.Album)}</td>
+                          <td style="padding: 6px 10px; color: #555;">${escapeHtml(song.Artist)}</td>
+                        </tr>`;
+        }
+        pdfSongsTableBody.innerHTML = songsHtml;
+      }
+
+      // 6. Cấu hình html2pdf và tiến hành tải xuống
+      const element = document.getElementById('pdfReportTemplate');
+      element.style.display = 'block'; // Hiển thị tạm thời để thư viện chụp màn hình
+      
+      const opt = {
+        margin:       10,
+        filename:     'Bao_cao_tam_trang_AI.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().from(element).set(opt).save().then(() => {
+        element.style.display = 'none'; // Ẩn đi sau khi đã xuất PDF xong
+      }).catch(err => {
+        console.error("Xuất PDF thất bại:", err);
+        element.style.display = 'none';
+      });
+    });
+
+    // Logic gọi API đăng ký khuôn mặt
+    const btnRegisterFace = document.getElementById('btnRegisterFace');
+    const txtRegisterName = document.getElementById('txtRegisterName');
+    const registerStatus = document.getElementById('registerStatus');
+
+    btnRegisterFace.addEventListener('click', async () => {
+      const name = txtRegisterName.value.trim();
+      if (!name) {
+        alert("Vui lòng nhập tên đăng ký!");
+        return;
+      }
+      try {
+        const res = await fetch(`/register_face?name=${encodeURIComponent(name)}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'success') {
+          registerStatus.textContent = `Đang đăng ký khuôn mặt cho "${name}"... Hãy giữ thẳng mặt trước camera!`;
+          registerStatus.style.display = 'block';
+          txtRegisterName.value = '';
+          
+          // Sau 2.5 giây thông báo hoàn thành
+          setTimeout(() => {
+            registerStatus.textContent = `Đăng ký khuôn mặt "${name}" thành công! Lần quét tới hệ thống sẽ nhận diện được bạn.`;
+            setTimeout(() => {
+              registerStatus.style.display = 'none';
+            }, 5000);
+          }, 2500);
+        }
+      } catch (e) {
+        alert("Có lỗi xảy ra trong quá trình đăng ký khuôn mặt.");
+      }
+    });
+
+    // Xử lý chuyển đổi chế độ Webcam và Tải ảnh lên
+    const btnModeWebcam = document.getElementById('btnModeWebcam');
+    const btnModeUpload = document.getElementById('btnModeUpload');
+    const viewWebcam = document.getElementById('viewWebcam');
+    const viewUpload = document.getElementById('viewUpload');
+    const btnBackToWebcam = document.getElementById('btnBackToWebcam');
+
+    btnModeWebcam.addEventListener('click', () => {
+      currentMode = 'webcam';
+      btnModeWebcam.classList.add('active', 'btn-primary');
+      btnModeWebcam.classList.remove('btn-outline-primary');
+      btnModeUpload.classList.remove('active', 'btn-primary');
+      btnModeUpload.classList.add('btn-outline-primary');
+      viewWebcam.classList.remove('d-none');
+      viewUpload.classList.add('d-none');
+    });
+
+    btnModeUpload.addEventListener('click', () => {
+      currentMode = 'upload';
+      btnModeUpload.classList.add('active', 'btn-primary');
+      btnModeUpload.classList.remove('btn-outline-primary');
+      btnModeWebcam.classList.remove('active', 'btn-primary');
+      btnModeWebcam.classList.add('btn-outline-primary');
+      viewUpload.classList.remove('d-none');
+      viewWebcam.classList.add('d-none');
+    });
+
+    btnBackToWebcam.addEventListener('click', () => {
+      btnModeWebcam.click();
+    });
+
+    // Xử lý kéo thả và tải file ảnh lên
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const btnSelectFile = document.getElementById('btnSelectFile');
+    const processedImg = document.getElementById('processedImg');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+
+    btnSelectFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    
+    dropZone.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', handleFileSelect);
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'rgba(15, 23, 42, 0.1)';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.background = 'rgba(15, 23, 42, 0.05)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.background = 'rgba(15, 23, 42, 0.05)';
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect();
+      }
+    });
+
+    async function handleFileSelect() {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      // Hiển thị vòng xoay loading
+      uploadPlaceholder.innerHTML = '<div class="spinner-border text-primary mb-3" role="status"></div><p class="mb-0 text-dark">Đang phân tích hình ảnh...</p>';
+      processedImg.classList.add('d-none');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const genre = genreSelect.value;
+        const res = await fetch(`/upload?genre=${genre}`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          alert(data.error);
+          resetUploadUI();
+          return;
+        }
+
+        // Hiển thị ảnh đã xử lý
+        processedImg.src = data.processed_url;
+        processedImg.classList.remove('d-none');
+        uploadPlaceholder.classList.add('d-none');
+
+        // Cập nhật bảng âm nhạc
+        renderTable(data.songs);
+        lastPayload = JSON.stringify(data.songs);
+
+        // Xử lý giọng nói, biểu đồ và nhật ký từ ảnh tải lên
+        if (data.emotion) {
+          updateChart(data.emotion);
+          addDiaryRecord(data.emotion);
+
+          // Phát âm nhận xét
+          let speechText = speechTexts[data.emotion] || '';
+          if (data.username) {
+            speechText = `Xin chào ${data.username}! Tôi nhận thấy biểu cảm từ bức ảnh của bạn là ${emotionMapVi[data.emotion] || data.emotion}. ${speechText}`;
+          }
+          if (speechText) {
+            lastSpeakTime = 0; // force speak
+            speak(speechText);
+          }
+
+          document.body.className = `app theme-${data.emotion.toLowerCase()}`;
+          lastEmotion = data.emotion;
+        }
+
+        // Cập nhật nhãn trạng thái cảm xúc
+        const emoVi = emotionMapVi[data.emotion] || data.emotion;
+        let labelText = '';
+        if (data.username) {
+          labelText = `Thành viên: ${data.username} | Cảm xúc: ${emoVi} (Từ ảnh)`;
+        } else if (data.is_group) {
+          labelText = `Cảm xúc tập thể: ${emoVi} (Nhóm ${data.num_faces} người - Từ ảnh)`;
+        } else {
+          labelText = `Cảm xúc: ${emoVi} (Từ ảnh)`;
+        }
+        statusEl.textContent = labelText;
+
+      } catch (err) {
+        alert("Phân tích ảnh thất bại.");
+        resetUploadUI();
+      }
+    }
+
+    function resetUploadUI() {
+      processedImg.classList.add('d-none');
+      uploadPlaceholder.classList.remove('d-none');
+      uploadPlaceholder.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-cloud-arrow-up-fill text-primary mb-3" viewBox="0 0 16 16">
+          <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z"/>
+        </svg>
+        <p class="mb-1 fw-bold text-dark">Kéo thả ảnh vào đây hoặc click để chọn</p>
+        <p class="text-muted small">Hỗ trợ các định dạng hình ảnh</p>
+      `;
+    }
+
+    // Xử lý hộp chọn Điều chỉnh cảm xúc thủ công (manualEmotionSelect)
+    const manualEmotionSelect = document.getElementById('manualEmotionSelect');
+    manualEmotionSelect.addEventListener('change', () => {
+      simulatedEmotion = manualEmotionSelect.value;
+      if (simulatedEmotion) {
+        const emoVi = emotionMapVi[simulatedEmotion] || simulatedEmotion;
+        statusEl.textContent = `Chế độ điều chỉnh: ${emoVi}`;
+        tick(); // Cập nhật lại ngay lập tức
+      } else {
+        statusEl.textContent = "Đang quét cảm xúc...";
+      }
+    });
+
+    // Hỗ trợ chế độ giả lập/demo cảm xúc bằng phím bấm (1-7) và 0 để tắt
+    document.addEventListener('keydown', (e) => {
+      // Bỏ qua nếu người dùng đang gõ tên đăng ký
+      if (document.activeElement && document.activeElement.id === 'txtRegisterName') {
+        return;
+      }
+      
+      const keyMap = {
+        '1': 'Angry',
+        '2': 'Disgusted',
+        '3': 'Fearful',
+        '4': 'Happy',
+        '5': 'Neutral',
+        '6': 'Sad',
+        '7': 'Surprised',
+        '0': ''
+      };
+
+      if (keyMap[e.key] !== undefined) {
+        simulatedEmotion = keyMap[e.key];
+        manualEmotionSelect.value = simulatedEmotion; // Giữ đồng bộ hiển thị với hộp chọn
+        
+        if (simulatedEmotion) {
+          console.log(`Chế độ giả lập cảm xúc: ${simulatedEmotion}`);
+          // Cập nhật nhãn trạng thái cảm xúc ngay lập tức để người dùng phản hồi nhanh
+          const emoVi = emotionMapVi[simulatedEmotion] || simulatedEmotion;
+          statusEl.textContent = `Chế độ Demo: ${emoVi} (Nhấn phím 0 để hủy)`;
+          tick(); // Gọi tick cập nhật bài hát và giọng nói tương ứng
+        } else {
+          console.log("Đã hủy chế độ giả lập, quay lại webcam tự động.");
+          statusEl.textContent = "Đang quét cảm xúc...";
+        }
+      }
+    });
+
+    // Kích hoạt ban đầu
+    initChart();
     tick();
-    // 2 lần/giây là đủ mượt mà, đỡ tốn CPU hơn 10 lần/giây.
     setInterval(tick, 500);
   </script>
 </body>
-
 </html>

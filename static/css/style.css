@@ -26,6 +26,49 @@ body.app {
         radial-gradient(900px 500px at 15% 10%, rgba(255, 51, 0, 0.16), transparent 55%),
         radial-gradient(900px 500px at 85% 20%, rgba(56, 189, 248, 0.18), transparent 55%),
         linear-gradient(180deg, var(--app-bg-1) 0%, var(--app-bg-0) 100%);
+    transition: background 0.8s ease, background-color 0.8s ease;
+}
+
+body.app.theme-happy {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(255, 193, 7, 0.22), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(255, 152, 0, 0.2), transparent 55%),
+                linear-gradient(180deg, #1b2e20 0%, #0d1a10 100%);
+}
+
+body.app.theme-sad {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(13, 110, 253, 0.16), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(108, 117, 125, 0.2), transparent 55%),
+                linear-gradient(180deg, #1a2332 0%, #0e141c 100%);
+}
+
+body.app.theme-angry {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(220, 53, 69, 0.25), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(253, 126, 20, 0.2), transparent 55%),
+                linear-gradient(180deg, #321616 0%, #1c0c0c 100%);
+}
+
+body.app.theme-fearful {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(111, 66, 193, 0.22), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(13, 110, 253, 0.15), transparent 55%),
+                linear-gradient(180deg, #241632 0%, #130a1c 100%);
+}
+
+body.app.theme-neutral {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(255, 255, 255, 0.08), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(108, 117, 125, 0.15), transparent 55%),
+                linear-gradient(180deg, #1e2530 0%, #0f131a 100%);
+}
+
+body.app.theme-surprised {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(25, 135, 84, 0.22), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(0, 255, 255, 0.15), transparent 55%),
+                linear-gradient(180deg, #16322b 0%, #0c1c18 100%);
+}
+
+body.app.theme-disgusted {
+    background: radial-gradient(900px 500px at 15% 10%, rgba(108, 117, 125, 0.15), transparent 55%),
+                radial-gradient(900px 500px at 85% 20%, rgba(40, 167, 69, 0.15), transparent 55%),
+                linear-gradient(180deg, #1f2d24 0%, #101913 100%);
 }
 
 .app-header {
@@ -122,4 +165,22 @@ body.app {
     * {
         scroll-behavior: auto !important;
     }
+}
+
+/* Emotion Diary Styling */
+.diary-list {
+    max-height: 120px;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.04);
+    border-radius: 10px;
+    padding: 8px 12px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.border-bottom-soft {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.diary-item:last-child {
+    border-bottom: none;
 }
