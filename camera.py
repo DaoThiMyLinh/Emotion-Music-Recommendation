@@ -243,7 +243,7 @@ class VideoCamera(object):
 		gray=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
 		face_rects=face_cascade.detectMultiScale(gray,1.3,5)
 		
-		# Reset name detected in this frame
+		# Reset name detected in this frame 
 		detected_username = ""
 		num_faces_detected = len(face_rects)
 		detected_emotions = []
