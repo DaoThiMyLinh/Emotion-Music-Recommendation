@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emotion Music Recommender</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Bigelow+Rules&display=swap" rel="stylesheet">
+  <link type="text/css" href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+    crossorigin="anonymous"></script>
+</head>
+
+<body class="app">
+  <header class="app-header py-4">
+    <div class="container">
+      <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
+        <div>
+          <div class="app-title">Emotion Music Recommender</div>
+          <div class="app-subtitle">Nhận diện cảm xúc khuôn mặt & gợi ý bài hát theo tâm trạng</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <span class="badge rounded-pill bg-dark">Flask</span>
+          <span class="badge rounded-pill bg-dark">OpenCV</span>
+          <span class="badge rounded-pill bg-dark">TensorFlow</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container pb-5">
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <section class="card card-glass h-100">
+          <div class="card-header card-header-soft">
+            <h2 class="card-title h5 mb-0">Emotion Detector</h2>
+          </div>
+          <div class="card-body">
+            <div class="video-shell">
+              <img id="video" class="video-feed" src="{{ url_for('video_feed') }}" alt="Webcam feed" />
+            </div>
+            <div class="hint mt-3">Mẹo: để mặt thẳng và đủ sáng để nhận diện tốt hơn.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <section class="card card-glass h-100">
+          <div class="card-header card-header-soft d-flex align-items-center justify-content-between gap-3">
+            <h2 class="card-title h5 mb-0">Song Recommendations</h2>
+            <div class="small text-muted" id="tableStatus">Đang tải…</div>
+          </div>
+          <div class="card-body">
+            <div id="ResultArea" class="table-wrap"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById('tableStatus');
+    const resultEl = document.getElementById('ResultArea');
+
+    function escapeHtml(value) {
+      const str = String(value ?? '');
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function renderTable(rows) {
+      const headers = ['Name', 'Album', 'Artist'];
+      let html = '<div class="table-responsive">';
+      html += '<table class="table table-hover align-middle mb-0 table-modern">';
+      html += '<thead><tr>' + headers.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>';
+      html += '<tbody>';
+
+      for (const row of rows) {
+        html += '<tr>'
+          + `<td class="cell-name">${escapeHtml(row.Name)}</td>`
+          + `<td>${escapeHtml(row.Album)}</td>`
+          + `<td>${escapeHtml(row.Artist)}</td>`
+          + '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+      resultEl.innerHTML = html;
+    }
+
+    let lastPayload = '';
+
+    async function tick() {
+      try {
+        const res = await fetch('/t', { cache: 'no-store' });
+        const data = await res.json();
+        const payload = JSON.stringify(data);
+
+        if (payload !== lastPayload) {
+          renderTable(data);
+          lastPayload = payload;
+        }
+
+        statusEl.textContent = 'Cập nhật: ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        statusEl.textContent = 'Không thể tải dữ liệu.';
+      }
+    }
+
+    tick();
+    // 2 lần/giây là đủ mượt mà, đỡ tốn CPU hơn 10 lần/giây.
+    setInterval(tick, 500);
+  </script>
+</body>
+
+</html>

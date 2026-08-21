@@ -1,0 +1,125 @@
+.outer-shadow {
+    --outer-shadow: 3px 3px 3px #d0d0d0, -3px -3px 3px #f8f8f8;
+    box-shadow: var(--outer-shadow);
+}
+
+.inner-shadow {
+    --inner-shadow: inset 3px 3px 3px #d0d0d0, inset -3px -3px 3px #f8f8f8;
+    box-shadow: var(--inner-shadow);
+}
+
+:root {
+    --app-bg-0: #06121f;
+    --app-bg-1: #0b2a3a;
+    --app-text: #0f172a;
+    --app-muted: rgba(15, 23, 42, 0.65);
+    --card-bg: rgba(255, 255, 255, 0.88);
+    --card-border: rgba(255, 255, 255, 0.35);
+    --accent: #ff3300;
+}
+
+body.app {
+    min-height: 100vh;
+    margin: 0;
+    color: var(--app-text);
+    background:
+        radial-gradient(900px 500px at 15% 10%, rgba(255, 51, 0, 0.16), transparent 55%),
+        radial-gradient(900px 500px at 85% 20%, rgba(56, 189, 248, 0.18), transparent 55%),
+        linear-gradient(180deg, var(--app-bg-1) 0%, var(--app-bg-0) 100%);
+}
+
+.app-header {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.app-title {
+    font-family: 'Bigelow Rules', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: clamp(44px, 5vw, 64px);
+    line-height: 1;
+    letter-spacing: 0.5px;
+}
+
+.app-subtitle {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.98rem;
+}
+
+.card-glass {
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    border-radius: 18px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.card-header-soft {
+    background: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.card-title {
+    color: rgba(15, 23, 42, 0.92);
+}
+
+.video-shell {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.video-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.hint {
+    color: var(--app-muted);
+    font-size: 0.92rem;
+}
+
+.table-wrap {
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.table-modern {
+    background: #ffffff;
+}
+
+.table-modern thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+    font-weight: 600;
+    color: rgba(15, 23, 42, 0.9);
+}
+
+.table-modern tbody td {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    color: rgba(15, 23, 42, 0.86);
+}
+
+.table-modern tbody tr:hover {
+    background: rgba(255, 51, 0, 0.06);
+}
+
+.cell-name {
+    font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+    }
+}
