@@ -28,8 +28,10 @@ def video_feed():
 def gen_table():
     genre = request.args.get('genre', 'usuk')
     simulate = request.args.get('simulate', '')
+    use_spotify_str = request.args.get('use_spotify', 'false')
     
     camera.current_genre = genre
+    camera.use_spotify = True if use_spotify_str == 'true' else False
     
     if simulate and simulate in camera.emotion_dict.values():
         for k, v in camera.emotion_dict.items():
@@ -179,7 +181,31 @@ def toggle_freeze():
     camera.frozen = not camera.frozen
     return jsonify({"frozen": camera.frozen})
 
+import urllib.request
+import urllib.parse
+import re
+
+@app.route('/youtube_id')
+def get_youtube_id():
+    query = request.args.get('query', '')
+    try:
+        url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query)
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        html = urllib.request.urlopen(req).read().decode()
+        # Fallback to search
+        match = re.search(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
+        if match:
+            return jsonify({"video_id": match.group(1)})
+        else:
+            match_fallback = re.findall(r"watch\?v=([a-zA-Z0-9_-]{11})", html)
+            if match_fallback:
+                return jsonify({"video_id": match_fallback[0]})
+    except Exception as e:
+        pass
+    return jsonify({"video_id": None})
+
 if __name__ == '__main__':
     app.debug = True
     app.run(port=5001)
     
+

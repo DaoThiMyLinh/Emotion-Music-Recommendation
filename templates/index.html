@@ -160,6 +160,12 @@
                 <option value="lofi">Lofi (Không lời)</option>
               </select>
               
+              <!-- Nút Toggle Spotify API -->
+              <!-- <div class="form-check form-switch d-flex align-items-center ms-2 mb-0" title="Bật/Tắt lấy nhạc Real-time từ Spotify">
+                <input class="form-check-input me-2" type="checkbox" role="switch" id="spotifyToggle" style="cursor: pointer;">
+                <label class="form-check-label small fw-bold text-success text-nowrap" for="spotifyToggle" style="cursor: pointer;">Spotify API</label>
+              </div> -->
+
               <!-- Nút Tắt/Bật giọng nói AI -->
               <button id="btnVoiceToggle" class="btn btn-sm btn-outline-secondary py-1 px-2 d-inline-flex align-items-center justify-content-center" title="Tắt/Bật giọng nói AI">
                 <svg id="svgVoiceOn" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-volume-up-fill" viewBox="0 0 16 16">
@@ -227,6 +233,25 @@
       Báo cáo được tạo tự động bởi ứng dụng Emotion Music Recommender (KLTN).
     </div>
   </div>
+
+  <!-- Floating YouTube Player -->
+  <div id="youtubePlayerContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;">
+    <div class="card shadow-lg" style="width: 350px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255, 255, 255, 0.95); overflow: hidden;">
+      <div class="card-header d-flex justify-content-between align-items-center bg-white" style="border-bottom: 1px solid #eee; padding: 10px 15px;">
+        <h6 id="ytPlayingTitle" class="mb-0 fw-bold text-danger text-truncate" style="max-width: 280px; font-size: 0.9rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-youtube me-1" viewBox="0 0 16 16">
+            <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.052-.072 1.96l-.01.103-.022.26-.01.104c-.048.519-.119 1.023-.22 1.402a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.007 2.007 0 0 1 1.415-1.42c1.16-.312 5.569-.334 6.18-.335h.142c.309 0 1.587.006 2.927.052l.17.006.087.004.171.007.171.007c1.11.049 2.167.128 2.654.26zM3.641 6.183v3.634l3.324-1.817-3.324-1.817z"/>
+          </svg>
+          Đang phát...
+        </h6>
+        <button type="button" class="btn-close" aria-label="Close" onclick="closeYoutubePlayer()" style="font-size: 0.75rem;"></button>
+      </div>
+      <div class="card-body p-0">
+        <iframe id="youtubeIframe" width="100%" height="200" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="display: block;"></iframe>
+      </div>
+    </div>
+  </div>
+
 
   <script>
     const statusEl = document.getElementById('tableStatus');
@@ -392,8 +417,13 @@
       currentSongsList = rows;
       const headers = ['Name', 'Album', 'Artist', 'Nghe nhạc'];
       let html = '<div class="table-responsive">';
-      html += '<table class="table table-hover align-middle mb-0 table-modern">';
-      html += '<thead><tr>' + headers.map(h => `<th scope="col">${h}</th>`).join('') + '</tr></thead>';
+      html += '<table class="table table-hover align-middle mb-0 table-modern" style="table-layout: fixed; width: 100%;">';
+      html += '<thead><tr>';
+      html += '<th scope="col" style="width: 32%;">Name</th>';
+      html += '<th scope="col" style="width: 25%;">Album</th>';
+      html += '<th scope="col" style="width: 20%;">Artist</th>';
+      html += '<th scope="col" style="width: 125px;">Nghe nhạc</th>';
+      html += '</tr></thead>';
       html += '<tbody>';
 
       for (const row of rows) {
@@ -402,18 +432,23 @@
         const spLink = `https://open.spotify.com/search/${query}`;
 
         html += '<tr>'
-          + `<td class="cell-name">${escapeHtml(row.Name)}</td>`
-          + `<td>${escapeHtml(row.Album)}</td>`
-          + `<td>${escapeHtml(row.Artist)}</td>`
+          + `<td class="cell-name text-truncate" title="${escapeHtml(row.Name)}">${escapeHtml(row.Name)}</td>`
+          + `<td class="text-truncate" title="${escapeHtml(row.Album)}">${escapeHtml(row.Album)}</td>`
+          + `<td class="text-truncate" title="${escapeHtml(row.Artist)}">${escapeHtml(row.Artist)}</td>`
           + `<td>
-               <div class="d-flex gap-1">
-                 <a href="${ytLink}" target="_blank" class="btn btn-sm btn-danger py-1 px-2 d-inline-flex align-items-center" title="Tìm trên YouTube">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-play-fill me-1" viewBox="0 0 16 16">
+               <div class="d-flex gap-1 flex-wrap">
+                 <button onclick="playPreview(this, '${escapeHtml(row.Name)}', '${escapeHtml(row.Artist)}')" class="btn btn-sm btn-info py-1 px-2 d-inline-flex align-items-center text-white" style="width: 110px; justify-content: flex-start;" title="Nghe trực tiếp trên web">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-play-circle-fill me-2" viewBox="0 0 16 16">
+                     <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814l-3.5-2.5z"/>
+                   </svg>Nghe thử
+                 </button>
+                 <a href="${ytLink}" target="_blank" class="btn btn-sm btn-danger py-1 px-2 d-inline-flex align-items-center" style="width: 110px; justify-content: flex-start;" title="Tìm trên YouTube">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-play-fill me-2" viewBox="0 0 16 16">
                      <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
                    </svg>YouTube
                  </a>
-                 <a href="${spLink}" target="_blank" class="btn btn-sm btn-success py-1 px-2 d-inline-flex align-items-center" title="Tìm trên Spotify">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-music-note me-1" viewBox="0 0 16 16">
+                 <a href="${spLink}" target="_blank" class="btn btn-sm btn-success py-1 px-2 d-inline-flex align-items-center" style="width: 110px; justify-content: flex-start;" title="Tìm trên Spotify">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-music-note me-2" viewBox="0 0 16 16">
                      <path d="M9 13c0 1.105-1.12 2-2.5 2S4 14.105 4 13s1.12-2 2.5-2 2.5.895 2.5 2z"/>
                      <path fill-rule="evenodd" d="M9 3v10H8V3h1z"/>
                      <path d="M8 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 13 2.22V4L8 5V2.82z"/>
@@ -426,6 +461,47 @@
 
       html += '</tbody></table></div>';
       resultEl.innerHTML = html;
+    }
+
+    // Logic xử lý nghe nhạc trực tiếp (YouTube Player)
+    function closeYoutubePlayer() {
+      const playerContainer = document.getElementById('youtubePlayerContainer');
+      const iframe = document.getElementById('youtubeIframe');
+      iframe.src = '';
+      playerContainer.style.display = 'none';
+    }
+
+    async function playPreview(btn, songName, artistName) {
+      const query = songName + ' ' + artistName;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang tải...';
+      btn.disabled = true;
+      
+      try {
+        const res = await fetch(`/youtube_id?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        
+        if (data.video_id) {
+          const playerContainer = document.getElementById('youtubePlayerContainer');
+          const iframe = document.getElementById('youtubeIframe');
+          const title = document.getElementById('ytPlayingTitle');
+          
+          title.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-youtube me-1" viewBox="0 0 16 16"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.052-.072 1.96l-.01.103-.022.26-.01.104c-.048.519-.119 1.023-.22 1.402a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.68v-.123c.002-.215.01-.958.064-1.778l.007-.103.003-.052.008-.104.022-.26.01-.104c.048-.519.119-1.023.22-1.402a2.007 2.007 0 0 1 1.415-1.42c1.16-.312 5.569-.334 6.18-.335h.142c.309 0 1.587.006 2.927.052l.17.006.087.004.171.007.171.007c1.11.049 2.167.128 2.654.26zM3.641 6.183v3.634l3.324-1.817-3.324-1.817z"/></svg> ${songName} - ${artistName}`;
+          
+          iframe.src = `https://www.youtube.com/embed/${data.video_id}?autoplay=1`;
+          
+          playerContainer.style.display = 'block';
+          playerContainer.classList.add('animate-slide-up');
+        } else {
+          alert("Xin lỗi, không tìm thấy video YouTube cho bài hát này.");
+        }
+      } catch(e) {
+        console.error(e);
+        alert("Có lỗi xảy ra khi tải video.");
+      }
+      
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
     }
 
     let lastPayload = '';

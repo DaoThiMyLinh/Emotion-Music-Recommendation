@@ -34,6 +34,8 @@ global frozen
 frozen = False
 global current_genre
 current_genre = 'usuk'
+global use_spotify
+use_spotify = False
 show_text=[0]
 global num_faces_detected
 num_faces_detected = 0
@@ -364,6 +366,8 @@ class VideoCamera(object):
 		ret, jpeg = cv2.imencode('.jpg', img)
 		return jpeg.tobytes(), df1
 
+import Spotipy
+
 def music_rec(genre='usuk'):
 	emotion_idx = show_text[0]
 	if genre == 'vpop':
@@ -371,7 +375,14 @@ def music_rec(genre='usuk'):
 	elif genre == 'lofi':
 		return pd.DataFrame(lofi_music.get(emotion_idx, []), columns=['Name', 'Album', 'Artist'])
 	else:
-		df = pd.read_csv(music_dist[emotion_idx])
-		df = df[['Name', 'Album', 'Artist']]
-		df = df.head(15)
-		return df
+		if use_spotify:
+			return Spotipy.get_dynamic_playlist(emotion_idx)
+		else:
+			emotion_name = emotion_dict.get(emotion_idx, "neutral").lower()
+			csv_path = f"songs/{emotion_name}.csv"
+			import os
+			if os.path.exists(csv_path):
+				df = pd.read_csv(csv_path)
+				return df[['Name', 'Album', 'Artist']].head(15)
+			return pd.DataFrame(columns=['Name', 'Album', 'Artist'])
+
